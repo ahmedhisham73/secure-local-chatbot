@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  auth_service:
+    build: ./app/auth_service
+    ports:
+      - "5000:5000"
+    environment:
+      - JWT_SECRET_KEY=your_secret_key
+    networks:
+      - chatbot_network
+    volumes:
+      - ./data/users:/app/data/users
+      - ./app/shared:/app/shared
+
+  chat_service:
+    build: ./app/chat_service
+    ports:
+      - "5101:5101"
+    depends_on:
+      - auth_service
+    environment:
+      - MODEL_PATH=/app/models/TinyLLAMA/tinyllama-1.1b-chat-v1.0.Q4_K_S.gguf
+      - LOG_DIR=/app/log_service/responses_logs
+    volumes:
+      - ./app/shared:/app/shared
+      - ./app/chat_service/models/TinyLLAMA:/app/models/TinyLLAMA
+      - ./app/log_service/responses_logs:/app/log_service/responses_logs
+    networks:
+      - chatbot_network
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - auth_service
+      - chat_service
+    networks:
+      - chatbot_network
+
+networks:
+  chatbot_network:
+    driver: bridge
+

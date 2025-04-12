@@ -1,0 +1,11 @@
+flask==1.1.2
+flask_cors==5.0.0
+pyjwt==1.7.1
+python-dotenv==0.21.1
+ldap3==2.9.1
+jinja2==3.0.3
+itsdangerous==1.1.0
+werkzeug==0.16.1
+PyYAML==5.4.1
+gunicorn==20.1.0
+
