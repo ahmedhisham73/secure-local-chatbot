@@ -1,12 +1,15 @@
-## 🧠 Secure Local Chatbot Architecture - Documentation (Updated)
+🧠 Secure Local Chatbot Architecture – Technical Documentation
+Purpose: Provide a fully containerized, JWT-secured, self-hosted chatbot architecture using llama-cpp, reverse-proxied via NGINX with HTTPS. Built for high-compliance, isolated enterprise setups.
 
-## 📁 Project Structure
-```
+📁 Project Directory Layout
+bash
+Copy
+Edit
 chatbot_enterprise_local/
 ├── docker-compose.yml
 ├── nginx/
 │   ├── nginx.conf
-│   └── certs/                  # Self-signed certs (if using HTTPS)
+│   └── certs/                      # TLS certs (self-signed or CA-issued)
 ├── app/
 │   ├── auth_service/
 │   │   ├── main.py
@@ -23,67 +26,78 @@ chatbot_enterprise_local/
 │   │   └── responses_logs/
 │   │       └── chatbot_logs.log
 ├── models/
-│   └── TinyLLAMA/
+│   └── TinyLLAMA/                  # 🔒 Excluded from Git
 │       └── tinyllama-1.1b-chat-v1.0.Q4_K_S.gguf
 ├── data/
 │   └── users/
 │       └── users.yaml
-```
+🔐 Auth Service
+Port: 5000
 
----
+Purpose:
 
-## 🔐 Auth Service
-- Runs on: `http://localhost:5000`
-- Handles login
-- Verifies credentials via `users.yaml`
-- Generates JWT token using `jwt_utils.py`
-- Exposed endpoint:
-  - `POST /login` → returns token + user info
+Accepts user credentials via /login
 
-### ✅ JWT Payload
-```json
+Validates against YAML-based LDAP mock (users.yaml)
+
+Returns JWT with username, role, and expiry
+
+Security: Uses HS256 tokens via jwt_utils.py
+
+🔓 Endpoint
+http
+Copy
+Edit
+POST /login
+JWT Payload Example
+json
+Copy
+Edit
 {
   "username": "analyst1",
   "role": "analyst",
-  "exp": <timestamp>
+  "exp": 1744474210
 }
-```
+🤖 Chat Service
+Port: 5101
 
----
+Purpose:
 
-## 🤖 Chat Service
-- Runs on: `http://localhost:5101`
-- Requires valid JWT token (checked via `rbac.py`)
-- Generates LLM response using `llama-cpp-python`
-- Logs each request/response
-- Model file loaded from volume mount
+Exposes /chat endpoint
 
-### Exposed endpoint:
-- `POST /chat` → returns response based on prompt
+Validates JWT (via decorators)
 
-### Environment Variables
-- `MODEL_PATH=/app/models/TinyLLAMA/tinyllama-1.1b-chat-v1.0.Q4_K_S.gguf`
-- `LOG_DIR=/app/log_service/responses_logs`
+Generates LLM output using llama-cpp-python
 
----
+Logging: Requests/responses logged and rotated (loguru)
 
-## 🌐 NGINX (Reverse Proxy with HTTPS)
-- Runs on: `https://localhost:8443`
-- Proxies:
-  - `/login` → auth_service
-  - `/chat` → chat_service
-- Self-signed certs mounted via volume
+Environment Variables
+env
+Copy
+Edit
+MODEL_PATH=/app/models/TinyLLAMA/tinyllama-1.1b-chat-v1.0.Q4_K_S.gguf
+LOG_DIR=/app/log_service/responses_logs
+🌐 NGINX Reverse Proxy
+HTTPS Port: 8443
 
-### 🔐 TLS Enabled Reverse Proxy
-```
+Features:
+
+TLS termination (self-signed or custom cert)
+
+CORS headers properly managed
+
+Proxies /login and /chat to their respective services
+
+External Access
+bash
+Copy
+Edit
 https://localhost:8443/login
 https://localhost:8443/chat
-```
-
----
-
-## 🐳 Docker Compose
-```yaml
+🐳 Docker Compose Overview
+yaml
+Copy
+Edit
 version: '3.8'
 
 services:
@@ -132,46 +146,45 @@ services:
 networks:
   chatbot_network:
     driver: bridge
-```
-
----
-
-## 🧪 Curl Test
-### Login:
-```bash
+🧪 API Testing
+🔑 Login
+bash
+Copy
+Edit
 curl -k https://localhost:8443/login \
   -H "Content-Type: application/json" \
   -d '{"username": "analyst1", "password": "pass123"}'
-```
-
-### Chat:
-```bash
+🤖 Chat
+bash
+Copy
+Edit
 curl -k https://localhost:8443/chat \
   -H "Authorization: Bearer <JWT_TOKEN>" \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "What are the key banking risks in Egypt?"}'
-```
+  -d '{"prompt": "Give me tips for improving banking risk assessment."}'
+🔐 Security Measures
+JWT + RBAC-based endpoint protection
 
----
+TLS (HTTPS) on all public interfaces
 
-## 🛡 Security Summary
-- JWT-based Auth with Expiration
-- RBAC decorators: `@requires_auth`, `@requires_role`
-- HTTPS termination via NGINX
-- Services isolated in Docker containers
-- Logging with rotation & compression using `loguru`
+Services isolated in internal network bridge
 
----
+CORS headers and Vary: Origin managed carefully
 
-## 🔮 Next Improvements
-- Add Refresh Token endpoint
-- Add User Role Management (admin view)
-- Add Prometheus & Grafana for monitoring
-- Streamlit/React frontend for usability
-- CI/CD GitHub Action for auto-deploy
+Model path and secret values isolated via env/volumes
 
----
+Log rotation using loguru (production-ready)
 
-> ✨ Built for secure AI services in enterprise-grade infrastructure 💼
+🛠 Future Enhancements
+ Add Refresh Token logic with expiry renewal
+
+ RBAC Dashboard for role management (admin UI)
+
+ Centralized monitoring (Prometheus + Grafana)
+
+ Integrated React frontend (already scaffolded)
+
+ GitHub Actions CI/CD (auto-build + push)
+
 
 
